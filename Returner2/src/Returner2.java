@@ -11,6 +11,6 @@
 public class Returner2
 {
     public static void main (String[] args){
-        System.out.println("HELLO THERE");
+        System.out.println("Cameron < Josh");
     }
 }

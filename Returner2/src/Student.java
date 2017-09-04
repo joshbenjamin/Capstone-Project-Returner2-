@@ -1,4 +1,3 @@
-
 import java.util.ArrayList;
 
 /*
@@ -13,6 +12,7 @@ import java.util.ArrayList;
  */
 public class Student
 {
+
     private String studentNumber;
     private ArrayList<Character> studentAnswers;
     private Double mark;

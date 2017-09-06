@@ -21,7 +21,11 @@ public class GenerateReturnerPage
         this.image = image;
         this.testDetails = testDetails;
     }
-    
+
+    /**
+     *  Method which adds an orientation rectangle?
+     *
+     */
     public void insertWatermark(){
         
     }

@@ -6,7 +6,6 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 
 public class PageScanner implements PlugInFilter
 {
@@ -33,6 +32,7 @@ public class PageScanner implements PlugInFilter
         // we immediately correct potential orientation issues
         int[] pixels = flipPage(ip);
         allignPage(ip);
+        pixels = getStudentNumber(ip);
         int width = ip.getWidth();
         int height = ip.getHeight();
 
@@ -51,23 +51,6 @@ public class PageScanner implements PlugInFilter
             e.printStackTrace();
         }
     }
-
-    /**
-     * Scans the file which was in the argument for the class.
-     *
-     * @throws IOException
-     */
-    public void scan() throws IOException {
-        // Only consider front pages..
-
-        BufferedImage image = ImageIO.read(file);
-
-        // test - passed
-        System.out.println("Height: "+image.getHeight());
-        System.out.println("Width: "+image.getWidth());
-
-
-    }
     /**
      * Current rectangle co-ords:
      * 171, 265 TL
@@ -85,7 +68,7 @@ public class PageScanner implements PlugInFilter
         Rectangle r = ip.getRoi();
         boolean orientation = true;
         /**
-         * This loop is only looking for the recatngle
+         * This loop is only looking for the rectangle
          *
          *
          * A value of -1 for a pixel position indicates whitespace.
@@ -179,8 +162,40 @@ public class PageScanner implements PlugInFilter
         
     }
 
-    private String getStudentNumber(ImageProcessor ip){
-        
-        return "";
+    private int[] getStudentNumber(ImageProcessor ip){
+        int[] pixels = (int[]) ip.getPixels();
+        int width = ip.getWidth();
+        boolean numbers = false;
+        /**
+         * start of first block (927, 527)
+         * blocks are 30x30
+         * have 29 pixels between them on x axis
+         * have 9 pixels between them on y axis
+         */
+
+        // outer loop gets us to top left corner of each box
+
+        for(int collumn = 934; collumn < 1445; collumn += 59){
+
+            if(collumn >= 934+59*6) {
+                numbers = true;
+            }
+            for(int row = 527; row < 1560; row += 40){
+                // now we are in a box. Check if pixels are here -> map selected
+                if (numbers && row >= 527+400) {
+                    break;
+                }
+                for (int y = row; y < row +30; y ++) {
+                    int offset = y*width;
+                    for (int x = collumn; x < collumn + 30; x ++){
+                        // working with a pixel in the box
+                        int i = offset + x;
+                        pixels[i] = - 1800000;
+                    }
+                }
+            }
+        }
+
+        return pixels;
     }
 }

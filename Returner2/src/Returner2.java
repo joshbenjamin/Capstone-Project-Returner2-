@@ -20,7 +20,8 @@ public class Returner2
     public static void main (String[] args)
     {
         try {
-            File pdf = new File("/home/cameron/csc_2016_returner_cover.pdf");
+            //File pdf = new File("/home/cameron/csc_2016_returner_cover.pdf");
+            File pdf = new File(System.getProperty("user.dir") + "\\Files\\test.pdf");
             if (pdf.exists()) 
             {
                 //Opens the pdf on the pc but serves no real purpose at this stage.
@@ -31,7 +32,7 @@ public class Returner2
 		} 
                 else
                 {
-        		System.out.println("Desktop Error");
+                    System.out.println("Desktop Error");
 		}
 
             }

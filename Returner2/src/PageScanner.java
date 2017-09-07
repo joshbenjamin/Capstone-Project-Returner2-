@@ -8,7 +8,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
-
 public class PageScanner implements PlugInFilter
 {
     private File file = null;
@@ -24,10 +23,6 @@ public class PageScanner implements PlugInFilter
     // still need to learn whats going on here
     public int setup(String arg, ImagePlus imp)
     {
-        if (arg.equals("about"))
-        {
-            return DONE;
-        }
         return DOES_8G+DOES_STACKS+SUPPORTS_MASKING;
     }
     // from the tutorial
@@ -37,6 +32,7 @@ public class PageScanner implements PlugInFilter
     public void run(ImageProcessor ip) {
         // we immediately correct potential orientation issues
         int[] pixels = flipPage(ip);
+        allignPage(ip);
         int width = ip.getWidth();
         int height = ip.getHeight();
 
@@ -44,12 +40,6 @@ public class PageScanner implements PlugInFilter
 
         System.out.println("width: " + width);
         System.out.println("height: " + height);
-
-
-
-
-
-
 
         // redraws the image with new pixel set.
         ip.setPixels(pixels);
@@ -140,7 +130,50 @@ public class PageScanner implements PlugInFilter
      */
     public int[] allignPage(ImageProcessor ip)
     {
-        return null;
+        System.out.println("Allign Page");
+
+        int[] pixels = (int[]) ip.getPixels();
+        Rectangle roi = ip.getRoi();
+
+        int distanceTop = 0;
+        int distanceBot = 0;
+
+        for (int y = 1110; y < roi.y + roi.height; y += 1110) {
+
+            int offset = y*ip.getWidth();
+
+            for (int x = roi.x; x < roi.x+roi.width; x++) {
+
+                int pos = offset+x;
+                if (y == 1110)
+                {
+                    if(pixels[pos] > -100) { //check if the pixel is white
+                        distanceTop ++;
+                    }
+                    else {
+                        break;
+                    }
+                }
+                if (y == 2220) {
+                    if (pixels[pos] > -100) { //check if the pixel is white
+                        distanceBot++;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        System.out.println("TOP: "+distanceTop);
+        System.out.println("BOT: "+distanceBot);
+
+        int diff = distanceTop - distanceBot;
+
+        double radAngle = Math.atan(diff);
+        double Angle =  Math.toDegrees(radAngle);
+
+        ip.rotate(Angle);
+
+        return (int[])ip.getPixels();
     }
     public void scalePage(){
         

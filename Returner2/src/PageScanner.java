@@ -57,6 +57,8 @@ public class PageScanner implements PlugInFilter
      * 248, 265 TR
      * 171, 476 BL
      * 248, 476 BR
+     *
+     * If the rectangle is not found, the page is flipped.
      */
 
     private int[] flipPage(ImageProcessor ip){
@@ -113,6 +115,11 @@ public class PageScanner implements PlugInFilter
      */
     public int[] allignPage(ImageProcessor ip)
     {
+        /**
+         *  This method takes the difference in length from the left edge
+         *  of the page to the border, uses arctan() to calculate the
+         *  angle, and adjusts it with the rotate(angle) method.
+         */
         System.out.println("Allign Page");
 
         int[] pixels = (int[]) ip.getPixels();

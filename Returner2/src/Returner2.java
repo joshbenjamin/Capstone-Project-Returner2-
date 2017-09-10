@@ -16,11 +16,11 @@ public class Returner2
 {
     public static void main (String[] args){
         try {
-            File file = new File("rectangleTEST.jpg");
+            File file = new File("csc2002s_2014_quiz_template.jpg");
             BufferedImage image = ImageIO.read(file);
-
+            //csc2002s_2014_quiz_template.jpg
             //rectangleTEST.jpg
-            ImagePlus ip = new ImagePlus("rectangleTEST.jpg", image);
+            ImagePlus ip = new ImagePlus("csc2002s_2014_quiz_template.jpg", image);
 
             ImageProcessor imageProcessor = new ColorProcessor(image);
 

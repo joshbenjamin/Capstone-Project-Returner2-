@@ -5,32 +5,38 @@
  */
 
 import ij.ImagePlus;
-import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.File;
 
 public class Returner2
 {
     public static void main (String[] args){
+
+        //csc2002s_2014_quiz_template.tiff
+        //rectangleTEST.tiff
+        final String IMAGEPATH = "/csc2002s_2014_quiz_template.tiff";
+
+        PageScanner ps = null;
+        ImagePlus ip = null;
+        ImageProcessor imageProcessor = null;
+
         try {
-            File file = new File("csc2002s_2014_quiz_template.jpg");
-            BufferedImage image = ImageIO.read(file);
-            //csc2002s_2014_quiz_template.jpg
-            //rectangleTEST.jpg
-            ImagePlus ip = new ImagePlus("csc2002s_2014_quiz_template.jpg", image);
+            // Gets an image from the working dir()
+            long t = System.currentTimeMillis();
+            ip = new ImagePlus(System.getProperty("user.dir") +IMAGEPATH);
+            System.out.println("Read Time: "+(System.currentTimeMillis() - t)/1000000.0);
 
-            ImageProcessor imageProcessor = new ColorProcessor(image);
+            imageProcessor = ip.getProcessor();//new ColorProcessor(image);
 
-            PageScanner ps = new PageScanner(null, null);
-            ps.setup("test", ip);
-            ps.run(imageProcessor);
+            // new object which processes scanned image
+            ps = new PageScanner(null, null);
         }
-        catch(Exception e)
-        {
+
+        catch(Exception e) {
+            System.out.println("Error Occurred");
             e.printStackTrace();
         }
+
+        ps.setup("test", ip);
+        ps.run(imageProcessor);
     }
 }

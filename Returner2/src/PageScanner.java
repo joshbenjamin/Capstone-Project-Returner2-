@@ -33,6 +33,7 @@ public class PageScanner implements PlugInFilter
         int[] pixels = flipPage(ip);
         allignPage(ip);
         pixels = getStudentNumber(ip);
+        
         int width = ip.getWidth();
         int height = ip.getHeight();
 
@@ -62,7 +63,6 @@ public class PageScanner implements PlugInFilter
      */
 
     private int[] flipPage(ImageProcessor ip){
-
         int[] pixels = (int[]) ip.getPixels();
         int width = ip.getWidth();
         int offset,i ;

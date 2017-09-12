@@ -13,7 +13,8 @@ public class Returner2
 
         //csc2002s_2014_quiz_template.tiff
         //rectangleTEST.tiff
-        final String IMAGEPATH = "/csc2002s_2014_quiz_template.tiff";
+        //rotated25r.tiff
+        final String IMAGEPATH = "/rotated15r.tiff";
 
         PageScanner ps = null;
         ImagePlus ip = null;
@@ -22,10 +23,15 @@ public class Returner2
         try {
             // Gets an image from the working dir()
             long t = System.currentTimeMillis();
-            ip = new ImagePlus(System.getProperty("user.dir") +IMAGEPATH);
-            System.out.println("Read Time: "+(System.currentTimeMillis() - t)/1000000.0);
+
+            ip = new ImagePlus(System.getProperty("user.dir") + IMAGEPATH);
+
+            System.out.println("Read Time: "+(System.currentTimeMillis() - t)/1000000000.0);
 
             imageProcessor = ip.getProcessor();//new ColorProcessor(image);
+            // add some noise
+            imageProcessor.noise(25.0);
+            System.out.println("Read Time: "+(System.currentTimeMillis() - t)/1000000000.0);
 
             // new object which processes scanned image
             ps = new PageScanner(null, null);

@@ -31,7 +31,7 @@ public class PageScanner implements PlugInFilter
     public void run(ImageProcessor ip) {
         // we immediately correct potential orientation issues
         int[] pixels = flipPage(ip);
-        allignPage(ip);
+        pixels = allignPage(ip);
         pixels = getStudentNumber(ip);
         
         int width = ip.getWidth();
@@ -39,8 +39,8 @@ public class PageScanner implements PlugInFilter
 
         // We assume the page must be oriented until we find the rectangle.
 
-        System.out.println("width: " + width);
-        System.out.println("height: " + height);
+        //System.out.println("width: " + width);
+        //System.out.println("height: " + height);
 
         // redraws the image with new pixel set.
         ip.setPixels(pixels);
@@ -123,45 +123,96 @@ public class PageScanner implements PlugInFilter
         System.out.println("Allign Page");
 
         int[] pixels = (int[]) ip.getPixels();
+        boolean isLine = false;
         Rectangle roi = ip.getRoi();
 
         int distanceTop = 0;
         int distanceBot = 0;
 
-        for (int y = 1110; y < roi.y + roi.height; y += 1110) {
+        for (int y = 700; y < roi.y + roi.height; y += 200) {
 
             int offset = y*ip.getWidth();
 
             for (int x = roi.x; x < roi.x+roi.width; x++) {
 
                 int pos = offset+x;
-                if (y == 1110)
+                if (y == 700)
                 {
-                    if(pixels[pos] > -100) { //check if the pixel is white
+                    if(pixels[pos] > -15000000) { //check if the pixel is white
                         distanceTop ++;
                     }
                     else {
+                        for (int i = 0; i !=100 ;i++) {
+                            pixels[pos + i] = -1800000;
+                        }
                         break;
                     }
                 }
-                if (y == 2220) {
-                    if (pixels[pos] > -100) { //check if the pixel is white
+                if (y == 900) {
+                    if (pixels[pos] > -15000000) { //check if the pixel is white
+
                         distanceBot++;
                     } else {
+                        for (int i = 0; i !=100 ;i++) {
+                            pixels[pos + i] = -1800000;
+                        }
                         break;
                     }
                 }
             }
+        }
+
+        System.out.println("top: "+distanceTop +"" +
+                "\nbot: "+distanceBot);
+        int pixelThresh = (int) Math.round(1110*0.7);
+        int foundPixels = 0;
+        int interpCount = 1;
+        /**
+         * Tests to see if we actually encountered the side border and not just some scanned noise.
+         */
+        int interpInterval = Math.abs(distanceTop - distanceBot)/1110;
+        int x = distanceTop;
+
+        System.out.println("Interpolation Interval: " + interpInterval);
+
+        for (int row = 700; row != 900; row++) {
+            int offset = row*ip.getWidth();
+
+            if(pixels[x + offset] < -1000000){
+                foundPixels ++;
+            }
+            // actual interpolation
+            if (row - 1110 > interpInterval*interpCount){
+                if(distanceTop > distanceBot){
+                    x--;
+                }
+                else if(distanceTop < distanceBot){
+                    x++;
+                }
+                else{
+                    continue;
+                }
+                interpCount ++;
+            }
+        }
+        System.out.println("FoundPixels: " + foundPixels);
+        if (foundPixels >= pixelThresh) {
+            isLine = true;
+            System.out.println("Is Line?: " + isLine);
+        }
+
+        else{
+            // improve line search algorithm
         }
         System.out.println("TOP: "+distanceTop);
         System.out.println("BOT: "+distanceBot);
 
         int diff = distanceTop - distanceBot;
 
-        double radAngle = Math.atan(diff);
+        double radAngle = Math.atan(diff/200.0);
         double Angle =  Math.toDegrees(radAngle);
-
-        ip.rotate(Angle);
+        System.out.println("Rotate angle: " + Angle);
+        ip.rotate(-Angle);
 
         return (int[])ip.getPixels();
     }

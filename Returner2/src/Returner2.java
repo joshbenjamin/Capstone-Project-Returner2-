@@ -7,9 +7,10 @@ public class Returner2
 
         // /csc2002s_2014_quiz_template.tiff
         // /rectangleTEST.tiff
-        // /rotated25r.tiff
+        // /rotated15r.tiff
         // /upsidedown.tiff
-        final String IMAGEPATH = "/upsidedown.tiff";
+        // /rectangleRotate.tiff
+        final String IMAGEPATH = "/rotated15r.tiff";
 
         PageScanner ps = null;
         ImagePlus ip = null;

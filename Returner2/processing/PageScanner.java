@@ -3,7 +3,6 @@ import ij.plugin.filter.PlugInFilter;
 import ij.process.ImageProcessor;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
@@ -17,6 +16,8 @@ public class PageScanner implements PlugInFilter
     private static final int RECTANGLE_WIDTH = 77;
     private static final int RECTANGLE_HEIGHT = 211;
 
+    private static final int BORDER_THRESHOLD = 300;
+    private static final int REGION_CHECK = 10;
     private static final int BLACK_PIXEL = -8000000;
 
     // Object Constructor Method
@@ -33,39 +34,69 @@ public class PageScanner implements PlugInFilter
     // The image processor turns our image into an array of pixels
     // the processor has to be from the original image - duh
 
-    // The order of operations are as follows:
-    //      1.) Allign the page (80%)
-    //      2.) Find black square.
-    //      2.) Check/Correct page orientation
-    //      3.) Perform checks
-    //
+    /**
+     *
+     * @param ip
+     *      The order of operations are as follows:
+     *      1.) Allign the page (80%)
+     *      2.) Find black square. (100%)
+     *          This is done with two methods:
+     *              - findOrigin()
+     *              - establishOrigin()
+     *      3.) Scale page to a size
+     *      4.) Since the Origin has shifted, we find it again:
+     *              - establishOrigin()
+     *      3.) Perform checks
+     */
     public void run(ImageProcessor ip) {
-        // we immediately correct potential orientation issues
-        int[] pixels;
+        int[] pixels = (int[]) ip.getPixels();
         int[] origin;
 
-        /***TODO
-         *  do null check etc
-         */
-
-
-        pixels = allignPage(ip);
+        if (ip.equals(null)){
+            System.out.println("Unsuccessful file read");
+            System.exit(0);
+        }
+        allignPage(ip);
 
         ip.snapshot();
-
+        /**
         origin = findOrigin(ip);
+        if (origin == null) {
+            System.out.println("No origin found");
+            System.exit(0);
+        }
 
         // now we need a non-scaled version.
         ip.reset();
 
-        if(flipped)
-        {
+        if(flipped){
             ip.rotate(180);
         }
-        establishOrigin(origin[0], origin[1], ip);
 
+        int pixelPosition = establishOrigin(origin[0], origin[1], ip);
+        scaleCorrection(pixelPosition,ip);
+        // Ensure that the file has correct dimensions for file checks
+
+        ip.snapshot();
+
+        origin = findOrigin(ip);
+        if (origin == null) {
+            System.out.println("No origin found");
+            System.exit(0);
+        }
+
+        // now we need a non-scaled version.
+        ip.reset();
+        pixelPosition = establishOrigin(origin[0], origin[1], ip);
+        pixels[pixelPosition] = -18000;
         // write file method?
-
+        */
+        if (isQuiz){
+            // mark the quiz
+        }
+        else{
+            // check mark allocation
+        }
 
         ip.setPixels(pixels);
         BufferedImage image = ip.getBufferedImage();
@@ -76,124 +107,131 @@ public class PageScanner implements PlugInFilter
             e.printStackTrace();
         }
     }
+    //------------------------------------------------------------------------------------------------------------------
+
     /**
-     * Current rectangle co-ords:
-     * 171, 265 TL
-     * 248, 265 TR
-     * 171, 476 BL
-     * 248, 476 BR
      *
-     * If the rectangle is not found, the page is flipped.
+     * @param ip
+     *  This method takes the difference in length from the left edge of the page to the border, uses arctan() to
+     *  calculate the angle, and adjusts it with the rotate(angle) method.
+     *
+     *  We first check at the row with the value of 10% of the height and then 250 rows from that row. If we the
+     *  distance is to small or to great from the edge (violates the rules of being an edge), we check similary at the
+     *  row with the value of 90% of the height and 250 rows before it.
+     *
+     * @return int[]
+     *  This int[] array is the new array of pixels, which is used to rectify the image
      */
-
-    public int[] allignPage(ImageProcessor ip)
-    {
-        /**TODO
-         * Spli the check if line was found to seperate method
-         *
-         * only consider points that have next 3 pixels also black. ;)
-         *
-         */
-        /**
-         *  This method takes the difference in length from the left edge
-         *  of the page to the border, uses arctan() to calculate the
-         *  angle, and adjusts it with the rotate(angle) method.
-         */
-        System.out.println("Allign Page");
-
+    private void allignPage(ImageProcessor ip) {
+        int distanceTop = -1;
+        int distanceBot = -1;
+        int topStart = (int) Math.round(ip.getHeight() * 0.10);
+        int botStart = (int) Math.round(ip.getHeight() * 0.9);
         int[] pixels = (int[]) ip.getPixels();
-        boolean isLine = false;
-        Rectangle roi = ip.getRoi();
 
-        int distanceTop = 0;
-        int distanceBot = 0;
+        System.out.println(ip.getWidth());
+        boolean topCheck = true;
 
-        for (int y = 700; y < roi.y + roi.height; y += 200) {
+        System.out.println("Allign Page");
+        System.out.println("Top Row start: " + topStart);
 
-            int offset = y*ip.getWidth();
+        for (int row = topStart; row <= topStart + 250; row += 250){
+            int pixelPosition = row * ip.getWidth();
+            for(int test = 0; test != 10; test++) {
+                pixels[pixelPosition +test] = -18560;
+            }
+            for(int collumn = 0; collumn != BORDER_THRESHOLD; collumn ++) {
+                if (pixels[pixelPosition + collumn] < BLACK_PIXEL){
+                    //now check the next 3 pixels to see if they are also black indicating a border.
+                    boolean isBorder = true;
 
-            for (int x = roi.x; x < roi.x+roi.width; x++) {
-
-                int pos = offset+x;
-                if (y == 700)
-                {
-                    if(pixels[pos] > -15000000) { //check if the pixel is white
-                        distanceTop ++;
-                    }
-                    else {
-                        for (int i = 0; i !=100 ;i++) {
-                            pixels[pos + i] = -1800000;
+                    borderCheck:{
+                        for (int pos = 1; pos<=3; pos ++){
+                            if (pixels[pixelPosition + collumn +pos] > BLACK_PIXEL){
+                                isBorder = false;
+                                break borderCheck;
+                            }
                         }
-                        break;
                     }
-                }
-                if (y == 900) {
-                    if (pixels[pos] > -15000000) { //check if the pixel is white
 
-                        distanceBot++;
-                    } else {
-                        for (int i = 0; i !=100 ;i++) {
-                            pixels[pos + i] = -1800000;
+                    if (isBorder){
+                        for(int test = 0; test != 20; test++) {
+                            pixels[pixelPosition + collumn +test] = -18000;
                         }
-                        break;
+                        if(row == topStart){
+                            distanceTop = collumn;
+                        }
+                        else{
+                            distanceBot = collumn;
+                        }
+                        collumn = BORDER_THRESHOLD-1;
+                    }
+                }
+
+            }
+        }
+        if (distanceTop == -1 || distanceBot == -1){
+            topCheck = false;
+            System.out.println("top border not found");
+        }
+        if(distanceTop < 80 || distanceBot < 80){
+            topCheck = false;
+            System.out.println("top border too close to the edge");
+        }
+
+        if (!topCheck){
+            for (int row = botStart - 250; row <= botStart; row += 250){
+                int pixelPosition = row * ip.getWidth();
+
+                for(int collumn = 0; collumn != BORDER_THRESHOLD; collumn ++) {
+                    if (pixels[pixelPosition + collumn] < BLACK_PIXEL){
+                        //now check the next 3 pixels to see if they are also black indicating a border.
+                        boolean isBorder = true;
+
+                        borderCheck:{
+                            for (int pos = 1; pos<=3; pos ++){
+                                if (pixels[pixelPosition + collumn +pos] > BLACK_PIXEL){
+                                    isBorder = false;
+                                    break borderCheck;
+                                }
+                            }
+                        }
+
+                        if (isBorder){
+                            for(int test = 0; test != 20; test++) {
+                                pixels[pixelPosition + collumn +test] = -18000;
+                            }
+                            if(row == topStart){
+                                distanceTop = collumn;
+                            }
+                            else{
+                                distanceBot = collumn;
+                            }
+                            collumn = BORDER_THRESHOLD-1;
+                        }
                     }
                 }
             }
         }
-
-        System.out.println("top: "+distanceTop +"" +
-                "\nbot: "+distanceBot);
-        int pixelThresh = (int) Math.round(1110*0.7);
-        int foundPixels = 0;
-        int interpCount = 1;
-        /**
-         * Tests to see if we actually encountered the side border and not just some scanned noise.
-         */
-        int interpInterval = Math.abs(distanceTop - distanceBot)/1110;
-        int x = distanceTop;
-
-        System.out.println("Interpolation Interval: " + interpInterval);
-
-        for (int row = 700; row != 900; row++) {
-            int offset = row*ip.getWidth();
-
-            if(pixels[x + offset] < -1000000){
-                foundPixels ++;
-            }
-            // actual interpolation
-            if (row - 1110 > interpInterval*interpCount){
-                if(distanceTop > distanceBot){
-                    x--;
-                }
-                else if(distanceTop < distanceBot){
-                    x++;
-                }
-                else{
-                    continue;
-                }
-                interpCount ++;
-            }
+        if (distanceTop == -1 || distanceBot == -1){
+            topCheck = false;
+            System.out.println("top border not found");
+            System.out.println("ERROR");
         }
-        System.out.println("FoundPixels: " + foundPixels);
-        if (foundPixels >= pixelThresh) {
-            isLine = true;
-            System.out.println("Is Line?: " + isLine);
+        if(distanceTop < 80 || distanceBot < 80){
+            topCheck = false;
+            System.out.println("top border too close to the edge");
+            System.out.println("ERROR");
         }
-
-        else{
-            // improve line search algorithm
-        }
-        System.out.println("TOP: "+distanceTop);
-        System.out.println("BOT: "+distanceBot);
+        System.out.println("TOP: " + distanceTop);
+        System.out.println("BOT: " + distanceBot);
 
         int diff = distanceTop - distanceBot;
 
-        double radAngle = Math.atan(diff/200.0);
+        double radAngle = Math.atan(diff/250.0);
         double Angle =  Math.toDegrees(radAngle);
         System.out.println("Rotate angle: " + Angle);
         ip.rotate(-Angle);
-
-        return (int[])ip.getPixels();
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -201,9 +239,11 @@ public class PageScanner implements PlugInFilter
      *
      * @param ip
      *
-     * From the given ImageProcessor, it finds scales the image down to 20%, and finds the block, returning the
+     * From the given ImageProcessor, it scales the image down to 20%, and finds the block, returning the
      * co-ordinate of the blocks corner. It also checks the orientation of the page which it corrects, if the page is
      * upside-down
+     *
+     * The distance to the border must be a minimum of the edge width, which is 78
      *
      * @return int[x,y]
      * Here x and y are the relative co-ordinates on the original ImageProcessor.
@@ -213,7 +253,6 @@ public class PageScanner implements PlugInFilter
         int[] Origin = new int[2];
 
         int[] pixels = (int[])ip.getPixels();
-        //int[] originalPixels = pixels.clone();
 
         int row;
 
@@ -221,6 +260,7 @@ public class PageScanner implements PlugInFilter
         int height = ip.getHeight();
         int newWidth = (int)Math.round(width * 0.2);
         int newHeight = (int)Math.round(height * 0.2);
+        int halfWidth = (width - newWidth) / 2;
 
         boolean rotated = false;
 
@@ -230,6 +270,7 @@ public class PageScanner implements PlugInFilter
             if( row > newHeight/2){
 
                 if(rotated) {
+                    System.out.println("There is no black block on this page FLAG");
                     return null;
                 }
 
@@ -242,7 +283,7 @@ public class PageScanner implements PlugInFilter
                 row = 0;
             }
 
-            for (int count = (width - newWidth) / 2; count != newWidth + (width - newWidth) / 2; count++) {
+            for (int count = halfWidth; count != newWidth + halfWidth; count++) {
 
                 int position = count + row*width + width * (height - newHeight)/2;
 
@@ -254,8 +295,8 @@ public class PageScanner implements PlugInFilter
 
                     blockcheck:
                     {
-                        for (int line = 0; line < 10; line++) {
-                            for (int collumn = position; collumn < position + 15; collumn++) {
+                        for (int line = 0; line < REGION_CHECK; line++) {
+                            for (int collumn = position; collumn < position + REGION_CHECK; collumn++) {
 
                                 if (pixels[width * line + collumn] > BLACK_PIXEL) {
                                     isBlock = false;
@@ -268,7 +309,7 @@ public class PageScanner implements PlugInFilter
                     if (isBlock) {
                         pixels[position] = -180000;// - highlights pixel whose co-ordinate is returned
 
-                        Origin[0] = (int) Math.round((count - (width - newWidth) / 2)/0.2);
+                        Origin[0] = (int) Math.round((count - halfWidth)/0.2);
                         Origin[1] = (int) Math.round(row/0.2);
 
                         return  Origin;
@@ -324,6 +365,7 @@ public class PageScanner implements PlugInFilter
      *
      * @param x x co-ordinate of estimated origin
      * @param y y co-ordinate of estimated origin
+     * @param ip
      *
      * This method takes the estimated origin which was found on a scaled down image, and now with a guide as to
      * where to look, can establish the origin of the page, the top left corner of the black block.
@@ -332,14 +374,17 @@ public class PageScanner implements PlugInFilter
      */
     private int establishOrigin(int x, int y, ImageProcessor ip){
 
-        System.out.println(x + ", " + y);
-
         int[] pixels = (int[])ip.getPixels();
 
+        for (int row = y -10; row != y + 10; row ++) {
+            if (row <0) {
+                row = 0;
+            }
 
-        for (int row = y -20; row != y + 20; row ++) {
-            for (int collumn = x - 20; collumn != x + 20; collumn ++){
-
+            for (int collumn = x - 10; collumn != x + 10; collumn ++){
+                if (collumn <0) {
+                    collumn = 0;
+                }
                 int position = row * ip.getWidth() + collumn;
 
                 if (pixels[position] < BLACK_PIXEL) {
@@ -347,8 +392,8 @@ public class PageScanner implements PlugInFilter
 
                     blockcheck:
                     {
-                        for (int line = 0; line < 10; line++) {
-                            for (int col = 0; col < 15; col++) {
+                        for (int line = 0; line < REGION_CHECK; line++) {
+                            for (int col = 0; col < REGION_CHECK; col++) {
 
                                 if (pixels[position + col + line*ip.getWidth()] > BLACK_PIXEL) {
                                     isBlock = false;
@@ -359,15 +404,47 @@ public class PageScanner implements PlugInFilter
                     }
 
                     if (isBlock) {
-                        System.out.println("Found it");
-                        System.out.println(collumn + ", " + row);
-                        pixels[position] = -180000;
+
                         System.out.println(position);
+                        System.out.println("Found true Origin");
                         return  position;
                     }
                 }
             }
         }
+        System.out.println("Could not find the block on OG image");
         return -1;
+    }
+    //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     *
+     * @param pixelPosition
+     * @param ip
+     *
+     * We know that the width of the square should be 77 pixels wide. We also know that the height of the square should
+     * be 211. This method now checks what the length of the perceived box is and scales the page accordingly in the
+     * correct axis.
+     */
+    private void scaleCorrection(int pixelPosition, ImageProcessor ip){
+        int width = 0;
+        int height = 0;
+        int start = pixelPosition;
+        int[] pixels =(int[]) ip.getPixels();
+
+        while (pixels[start] < BLACK_PIXEL){
+            width ++;
+            start ++;
+        }
+        start = pixelPosition;
+        while (pixels[start] < BLACK_PIXEL){
+            height ++;
+            start += ip.getWidth();
+        }
+
+        ip.scale(77.0/width,211.0/height);
+        System.out.println("Scaled image: " + 77.0/width + ", " + 211.0/height);
+        System.out.println(width + ", " + height);
+
     }
 }

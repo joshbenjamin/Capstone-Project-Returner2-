@@ -1,37 +1,32 @@
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
 
+import java.io.IOException;
+
 public class Returner2
 {
     public static void main (String[] args){
+
+        /**TODO
+         * Ask user if the test is a quiz
+         * This can be done in the command line
+         */
 
         // /csc2002s_2014_quiz_template.tiff
         // /rectangleTEST.tiff
         // /rotated15r.tiff
         // /upsidedown.tiff
         // /rectangleRotate.tiff
-        final String IMAGEPATH = "/rotated15r.tiff";
+        final String IMAGEPATH = "/rectangleRotate.tiff";
 
         PageScanner ps = null;
         ImagePlus ip = null;
         ImageProcessor imageProcessor = null;
 
         try {
-            // Gets an image from the working dir()
-            long t = System.nanoTime();
-            System.out.println(System.getProperty("user.dir") + IMAGEPATH);
+
             ip = new ImagePlus(System.getProperty("user.dir") + IMAGEPATH);
-
-            System.out.println("Read Time: "+(System.nanoTime() - t)/1000000000.0);
-
             imageProcessor = ip.getProcessor();//new ColorProcessor(image);
-            // add some noise
-            //imageProcessor.noise(25.0);
-            System.out.println("Read Time: "+(System.nanoTime() - t)/1000000000.0);
-            /**TODO
-             * Ask user if the test is a quiz
-             */
-            // new object which processes scanned image
             ps = new PageScanner(true);
         }
 
@@ -41,6 +36,16 @@ public class Returner2
         }
 
         ps.setup("test", ip);
-        ps.run(imageProcessor);
+
+        if (imageProcessor != null) {
+            ps.run(imageProcessor);
+            try {
+                System.out.println("Wrote file");
+                ps.writeFile(imageProcessor);
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+        }
     }
 }

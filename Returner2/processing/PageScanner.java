@@ -5,6 +5,7 @@ import ij.process.ImageProcessor;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 
 public class PageScanner implements PlugInFilter
 {
@@ -12,9 +13,11 @@ public class PageScanner implements PlugInFilter
     private boolean isQuiz = false;
     private boolean flipped = false;
 
-    private static final int THRESHOLD = 50;
-    private static final int RECTANGLE_WIDTH = 77;
-    private static final int RECTANGLE_HEIGHT = 211;
+    private static final int VERTICAL_GAP = 8;
+    private static final int HORIZONTAL_GAP = 26;
+    private static final int BORDER_THICKNESS = 1;
+    private static final int BOX_WIDTH = 29;
+    private static final double BOX_HEIGHT = 29;
 
     private static final int BORDER_THRESHOLD = 300;
     private static final int REGION_CHECK = 10;
@@ -52,15 +55,12 @@ public class PageScanner implements PlugInFilter
         int[] pixels = (int[]) ip.getPixels();
         int[] origin;
 
-        if (ip.equals(null)){
-            System.out.println("Unsuccessful file read");
-            System.exit(0);
-        }
         allignPage(ip);
 
         ip.snapshot();
-        /**
+
         origin = findOrigin(ip);
+
         if (origin == null) {
             System.out.println("No origin found");
             System.exit(0);
@@ -90,22 +90,16 @@ public class PageScanner implements PlugInFilter
         pixelPosition = establishOrigin(origin[0], origin[1], ip);
         pixels[pixelPosition] = -18000;
         // write file method?
-        */
+
+        //int[][] test = getStudentNumber(pixelPosition, ip);
+
         if (isQuiz){
             // mark the quiz
         }
         else{
-            // check mark allocation
+
         }
 
-        ip.setPixels(pixels);
-        BufferedImage image = ip.getBufferedImage();
-        try {
-            ImageIO.write(image, "png", new File("out.png"));
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -174,7 +168,7 @@ public class PageScanner implements PlugInFilter
             topCheck = false;
             System.out.println("top border not found");
         }
-        if(distanceTop < 80 || distanceBot < 80){
+        if(distanceTop < 65 || distanceBot < 65){
             topCheck = false;
             System.out.println("top border too close to the edge");
         }
@@ -323,41 +317,54 @@ public class PageScanner implements PlugInFilter
     //------------------------------------------------------------------------------------------------------------------
 
     // This method does not change, even if it is not a quiz
-    private int[] getStudentNumber(ImageProcessor ip){
+    public int[][] getStudentNumber(int originPixel, ImageProcessor ip){
+
         int[] pixels = (int[]) ip.getPixels();
-        int width = ip.getWidth();
-        boolean numbers = false;
-        /**
-         * start of first block (927, 527)
-         * blocks are 30x30
-         * have 29 pixels between them on x axis
-         * have 9 pixels between them on y axis
-         */
 
-        // outer loop gets us to top left corner of each box
+        int currentPixelPoint = originPixel + 754 + (222 * ip.getWidth());
 
-        for(int collumn = 934; collumn < 1445; collumn += 59){
+        // outer loop goes through boxes
+        for (int column = 0; column != 9; column ++){
 
-            if(collumn >= 934+59*6) {
-                numbers = true;
+            int count = 0;
+
+            if (column %2 == 0){
+                currentPixelPoint += 1;
             }
-            for(int row = 527; row < 1560; row += 40){
-                // now we are in a box. Check if pixels are here -> map selected
-                if (numbers && row >= 527+400) {
-                    break;
+
+            for (int row = 0; row != 26; row ++){
+                if (column >= 6 && row >= 10){
+                    continue;
                 }
-                for (int y = row; y < row +30; y ++) {
-                    int offset = y*width;
-                    for (int x = collumn; x < collumn + 30; x ++){
-                        // working with a pixel in the box
-                        int i = offset + x;
-                        pixels[i] = - 1800000;
+                count ++;
+                if (count % 5 ==0){
+                    currentPixelPoint -= ip.getWidth();
+                }
+                // shifts it down by a box and its space
+                currentPixelPoint += ip.getWidth() * (BORDER_THICKNESS*3 + BOX_HEIGHT + VERTICAL_GAP);
+
+                // iterates through actual pixel block
+                for(int pixelRow = 2; pixelRow != BOX_HEIGHT - 3; pixelRow ++){
+                    for(int pixelColumn = 2; pixelColumn != BOX_WIDTH-3; pixelColumn ++){
+
+
+                        pixels[currentPixelPoint + ip.getWidth()*pixelRow + pixelColumn] = -18000;
                     }
                 }
             }
+            if (column >= 6){
+                currentPixelPoint -= 10 * ip.getWidth() * (BORDER_THICKNESS*3 + BOX_HEIGHT + VERTICAL_GAP);
+                currentPixelPoint += (BORDER_THICKNESS*3 + BOX_WIDTH + HORIZONTAL_GAP);
+                currentPixelPoint += 2*ip.getWidth();
+            }
+            else {
+                currentPixelPoint -= 26 * ip.getWidth() * (BORDER_THICKNESS * 3 + BOX_HEIGHT + VERTICAL_GAP);
+                currentPixelPoint += (BORDER_THICKNESS * 3 + BOX_WIDTH + HORIZONTAL_GAP);
+                currentPixelPoint += 5 * ip.getWidth();
+            }
         }
 
-        return pixels;
+        return null;
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -445,6 +452,21 @@ public class PageScanner implements PlugInFilter
         ip.scale(77.0/width,211.0/height);
         System.out.println("Scaled image: " + 77.0/width + ", " + 211.0/height);
         System.out.println(width + ", " + height);
+
+    }
+    //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     *
+     * @param ip
+     * @throws IOException
+     *
+     * This method is to be used once the checks have been completed. It is the end result of correcting orientation
+     * as well as marking front pages.
+     */
+    public void writeFile(ImageProcessor ip) throws IOException{
+        BufferedImage image = ip.getBufferedImage();
+        ImageIO.write(image, "png", new File("out.png"));
 
     }
 }

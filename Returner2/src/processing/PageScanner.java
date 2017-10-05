@@ -1,3 +1,5 @@
+package processing;
+
 import ij.ImagePlus;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.ImageProcessor;
@@ -17,11 +19,13 @@ public class PageScanner implements PlugInFilter
     private static final int HORIZONTAL_GAP = 26;
     private static final int BORDER_THICKNESS = 1;
     private static final int BOX_WIDTH = 29;
-    private static final double BOX_HEIGHT = 29;
-
+    private static final int BOX_HEIGHT = 29;
     private static final int BORDER_THRESHOLD = 300;
     private static final int REGION_CHECK = 10;
     private static final int BLACK_PIXEL = -8000000;
+
+    private static final double RECTANGLE_WIDTH = 77.0;
+    private static final double RECTANGLE_HEIGHT = 221.0;
 
     // Object Constructor Method
     // Let the test know whether there are quiz answers or not
@@ -57,8 +61,16 @@ public class PageScanner implements PlugInFilter
 
         allignPage(ip);
 
-        ip.snapshot();
+        try {
+            writeFile(ip);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
 
+        //ensures that we can revert back ti the original, non-scaled down version
+        ip.snapshot();
+        // find origin region
         origin = findOrigin(ip);
 
         if (origin == null) {
@@ -69,12 +81,16 @@ public class PageScanner implements PlugInFilter
         // now we need a non-scaled version.
         ip.reset();
 
-        if(flipped){
-            ip.rotate(180);
-        }
+
 
         int pixelPosition = establishOrigin(origin[0], origin[1], ip);
         scaleCorrection(pixelPosition,ip);
+        try {
+            writeFile(ip);
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
         // Ensure that the file has correct dimensions for file checks
 
         ip.snapshot();
@@ -91,7 +107,7 @@ public class PageScanner implements PlugInFilter
         pixels[pixelPosition] = -18000;
         // write file method?
 
-        //int[][] test = getStudentNumber(pixelPosition, ip);
+        int[][] test = getStudentNumber(pixelPosition, ip);
 
         if (isQuiz){
             // mark the quiz
@@ -119,113 +135,174 @@ public class PageScanner implements PlugInFilter
     private void allignPage(ImageProcessor ip) {
         int distanceTop = -1;
         int distanceBot = -1;
+        int distanceMid = -1;
         int topStart = (int) Math.round(ip.getHeight() * 0.10);
+        int midStart = ip.getHeight()/2;
         int botStart = (int) Math.round(ip.getHeight() * 0.9);
+
         int[] pixels = (int[]) ip.getPixels();
 
+        boolean topBorder = true;
+        boolean midBorder = true;
+        boolean botBorder = true;
         System.out.println(ip.getWidth());
-        boolean topCheck = true;
 
         System.out.println("Allign Page");
         System.out.println("Top Row start: " + topStart);
 
-        for (int row = topStart; row <= topStart + 250; row += 250){
-            int pixelPosition = row * ip.getWidth();
-            for(int test = 0; test != 10; test++) {
-                pixels[pixelPosition +test] = -18560;
+        // measures distance from edge to the border  at the topStart row.
+        topRowCheck:{
+            int pixelPosition = topStart * ip.getWidth();
+            /** TODO
+             * Remove this
+             */
+            for (int test = 0; test != 10; test++) {
+                pixels[pixelPosition + test] = -18560;
             }
-            for(int collumn = 0; collumn != BORDER_THRESHOLD; collumn ++) {
-                if (pixels[pixelPosition + collumn] < BLACK_PIXEL){
+
+            for (int column = 0; column != BORDER_THRESHOLD; column++) {
+                if (pixels[pixelPosition + column] < BLACK_PIXEL) {
                     //now check the next 3 pixels to see if they are also black indicating a border.
                     boolean isBorder = true;
 
-                    borderCheck:{
-                        for (int pos = 1; pos<=3; pos ++){
-                            if (pixels[pixelPosition + collumn +pos] > BLACK_PIXEL){
+                    // determines if pixel found is not just noise.
+                    borderCheck:
+                    {
+                        for (int pos = 1; pos <= 3; pos++) {
+                            if (pixels[pixelPosition + column + pos] > BLACK_PIXEL) {
                                 isBorder = false;
                                 break borderCheck;
                             }
                         }
                     }
 
-                    if (isBorder){
-                        for(int test = 0; test != 20; test++) {
-                            pixels[pixelPosition + collumn +test] = -18000;
+                    if (isBorder) {
+                        for (int test = 0; test != 20; test++) {
+                            pixels[pixelPosition + column + test] = -18000;
                         }
-                        if(row == topStart){
-                            distanceTop = collumn;
-                        }
-                        else{
-                            distanceBot = collumn;
-                        }
-                        collumn = BORDER_THRESHOLD-1;
+                        topBorder = true;
+                        distanceTop = column;
+                        break topRowCheck;
                     }
-                }
-
-            }
-        }
-        if (distanceTop == -1 || distanceBot == -1){
-            topCheck = false;
-            System.out.println("top border not found");
-        }
-        if(distanceTop < 65 || distanceBot < 65){
-            topCheck = false;
-            System.out.println("top border too close to the edge");
-        }
-
-        if (!topCheck){
-            for (int row = botStart - 250; row <= botStart; row += 250){
-                int pixelPosition = row * ip.getWidth();
-
-                for(int collumn = 0; collumn != BORDER_THRESHOLD; collumn ++) {
-                    if (pixels[pixelPosition + collumn] < BLACK_PIXEL){
-                        //now check the next 3 pixels to see if they are also black indicating a border.
-                        boolean isBorder = true;
-
-                        borderCheck:{
-                            for (int pos = 1; pos<=3; pos ++){
-                                if (pixels[pixelPosition + collumn +pos] > BLACK_PIXEL){
-                                    isBorder = false;
-                                    break borderCheck;
-                                }
-                            }
-                        }
-
-                        if (isBorder){
-                            for(int test = 0; test != 20; test++) {
-                                pixels[pixelPosition + collumn +test] = -18000;
-                            }
-                            if(row == topStart){
-                                distanceTop = collumn;
-                            }
-                            else{
-                                distanceBot = collumn;
-                            }
-                            collumn = BORDER_THRESHOLD-1;
-                        }
-                    }
+                    topBorder = false;
                 }
             }
         }
-        if (distanceTop == -1 || distanceBot == -1){
-            topCheck = false;
-            System.out.println("top border not found");
-            System.out.println("ERROR");
+        botRowCheck:{
+            int pixelPosition = botStart * ip.getWidth();
+            /** TODO
+             * Remove this
+             */
+            for (int test = 0; test != 10; test++) {
+                pixels[pixelPosition + test] = -18560;
+            }
+
+            for (int column = 0; column != BORDER_THRESHOLD; column++) {
+                if (pixels[pixelPosition + column] < BLACK_PIXEL) {
+                    //now check the next 3 pixels to see if they are also black indicating a border.
+                    boolean isBorder = true;
+
+                    // determines if pixel found is not just noise.
+                    borderCheck:
+                    {
+                        for (int pos = 1; pos <= 3; pos++) {
+                            if (pixels[pixelPosition + column + pos] > BLACK_PIXEL) {
+                                isBorder = false;
+                                break borderCheck;
+                            }
+                        }
+                    }
+
+                    if (isBorder) {
+                        for (int test = 0; test != 20; test++) {
+                            pixels[pixelPosition + column + test] = -18000;
+                        }
+                        botBorder = true;
+                        distanceBot = column;
+                        break botRowCheck;
+                    }
+                    botBorder = false;
+                }
+            }
         }
-        if(distanceTop < 80 || distanceBot < 80){
-            topCheck = false;
+        midRowCheck:{
+            int pixelPosition = midStart * ip.getWidth();
+            /** TODO
+             * Remove this
+             */
+            for (int test = 0; test != 10; test++) {
+                pixels[pixelPosition + test] = -18560;
+            }
+
+            for (int column = 0; column != BORDER_THRESHOLD; column++) {
+                if (pixels[pixelPosition + column] < BLACK_PIXEL) {
+                    //now check the next 3 pixels to see if they are also black indicating a border.
+                    boolean isBorder = true;
+
+                    // determines if pixel found is not just noise.
+                    borderCheck:
+                    {
+                        for (int pos = 1; pos <= 3; pos++) {
+                            if (pixels[pixelPosition + column + pos] > BLACK_PIXEL) {
+                                isBorder = false;
+                                break borderCheck;
+                            }
+                        }
+                    }
+
+                    if (isBorder) {
+                        for (int test = 0; test != 20; test++) {
+                            pixels[pixelPosition + column + test] = -18000;
+                        }
+
+                        distanceMid = column;
+                        midBorder = true;
+                        break midRowCheck;
+                    }
+                    midBorder = false;
+                }
+            }
+        }
+        if (botBorder && topBorder){
+
+            int rows = botStart - topStart;
+            System.out.println("Measuring top and bottom");
+            System.out.println("TOP: " + distanceTop +
+                    "\nBOT: " + distanceBot);
+
+            int diff = distanceTop - distanceBot;
+
+            double radAngle = Math.atan(diff * 1.0/rows);
+            double Angle =  Math.toDegrees(radAngle);
+
+            System.out.println("Rotate angle: " + Angle);
+            ip.rotate(-Angle);
+        }
+        else if(botBorder && midBorder){
+            int rows = botStart - midStart;
             System.out.println("top border too close to the edge");
-            System.out.println("ERROR");
+            System.out.println("so we take mid and bot");
+
+            int diff = distanceMid - distanceBot;
+            double radAngle = Math.atan(diff * 1.0/rows);
+            double Angle =  Math.toDegrees(radAngle);
+            System.out.println("Rotate angle: " + Angle);
+            ip.rotate(-Angle);
         }
-        System.out.println("TOP: " + distanceTop);
-        System.out.println("BOT: " + distanceBot);
+        else if(topBorder && midBorder){
+            int rows = midStart - topStart;
+            System.out.println("bot border too close to the edge");
+            System.out.println("so we take MID and TOP");
 
-        int diff = distanceTop - distanceBot;
-
-        double radAngle = Math.atan(diff/250.0);
-        double Angle =  Math.toDegrees(radAngle);
-        System.out.println("Rotate angle: " + Angle);
-        ip.rotate(-Angle);
+            int diff = distanceTop - distanceMid;
+            double radAngle = Math.atan(diff * 1.0/rows);
+            double Angle =  Math.toDegrees(radAngle);
+            System.out.println("Rotate angle: " + Angle);
+            ip.rotate(-Angle);
+        }
+        else{
+            System.out.println("Couldn't Rotate");
+        }
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -245,7 +322,6 @@ public class PageScanner implements PlugInFilter
     private int[] findOrigin(ImageProcessor ip){
 
         int[] Origin = new int[2];
-
         int[] pixels = (int[])ip.getPixels();
 
         int row;
@@ -367,7 +443,17 @@ public class PageScanner implements PlugInFilter
         return null;
     }
     //------------------------------------------------------------------------------------------------------------------
+    public int[][] getQuizAnswers(int originPixel, ImageProcessor ip){
+        //start of A1 block is 581, 1770
 
+        int[] pixels = (int[]) ip.getPixels();
+
+        int currentPixelPoint = originPixel + 754 + (222 * ip.getWidth());
+
+
+        return null;
+    }
+    //------------------------------------------------------------------------------------------------------------------
     /**
      *
      * @param x x co-ordinate of estimated origin
@@ -437,20 +523,26 @@ public class PageScanner implements PlugInFilter
         int width = 0;
         int height = 0;
         int start = pixelPosition;
+
+        int startWidth = pixelPosition + 50 * ip.getWidth();
+        int startHeight = pixelPosition + 30;
+
         int[] pixels =(int[]) ip.getPixels();
 
-        while (pixels[start] < BLACK_PIXEL){
+        while (pixels[startWidth] < BLACK_PIXEL){
             width ++;
-            start ++;
-        }
-        start = pixelPosition;
-        while (pixels[start] < BLACK_PIXEL){
-            height ++;
-            start += ip.getWidth();
+            startWidth ++;
         }
 
-        ip.scale(77.0/width,211.0/height);
-        System.out.println("Scaled image: " + 77.0/width + ", " + 211.0/height);
+        while (pixels[startHeight] < BLACK_PIXEL){
+            height ++;
+            startHeight += ip.getWidth();
+        }
+
+        //ip.scale(77.0/width,211.0/height);
+
+        System.out.println("Scaled image: " + RECTANGLE_WIDTH/width +
+                ", " + RECTANGLE_HEIGHT/height);
         System.out.println(width + ", " + height);
 
     }

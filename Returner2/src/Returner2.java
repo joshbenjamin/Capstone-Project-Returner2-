@@ -1,5 +1,6 @@
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
+import processing.PageScanner;
 
 import java.io.IOException;
 
@@ -17,7 +18,7 @@ public class Returner2
         // /rotated15r.tiff
         // /upsidedown.tiff
         // /rectangleRotate.tiff
-        final String IMAGEPATH = "/rectangleRotate.tiff";
+        final String IMAGEPATH = "/rotated15r.tiff";
 
         PageScanner ps = null;
         ImagePlus ip = null;
@@ -26,6 +27,7 @@ public class Returner2
         try {
 
             ip = new ImagePlus(System.getProperty("user.dir") + IMAGEPATH);
+            System.out.println("Testing: " + System.getProperty("user.dir") + IMAGEPATH);
             imageProcessor = ip.getProcessor();//new ColorProcessor(image);
             ps = new PageScanner(true);
         }

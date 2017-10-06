@@ -18,7 +18,7 @@ public class Returner2
         // /rotated15r.tiff
         // /upsidedown.tiff
         // /rectangleRotate.tiff
-        final String IMAGEPATH = "/rotated15r.tiff";
+        final String IMAGEPATH = "/test/rectangleTESTROTATE.png";
 
         PageScanner ps = null;
         ImagePlus ip = null;
@@ -43,7 +43,8 @@ public class Returner2
             ps.run(imageProcessor);
             try {
                 System.out.println("Wrote file");
-                ps.writeFile(imageProcessor);
+                imageProcessor = ps.getIp();
+                ps.writeFile(imageProcessor,"processedOut");
             }
             catch (IOException e){
                 e.printStackTrace();

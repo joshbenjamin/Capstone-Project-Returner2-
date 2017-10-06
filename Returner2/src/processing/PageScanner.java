@@ -20,7 +20,6 @@ public class PageScanner implements PlugInFilter
     private double ScaleFactor = 1;
 
     private static final int VERTICAL_GAP = 9;
-    private static final int HORIZONTAL_GAP = 28;
     private static final int BORDER_THICKNESS = 1;
     private static final int BOX_WIDTH = 28;
     private static final int BOX_HEIGHT = 28;
@@ -32,7 +31,6 @@ public class PageScanner implements PlugInFilter
     private static final int REGION_THRESHOLD = 50;
 
     private static final int BLACK_PIXEL = -7000000;
-    private static final int PENCIL_PIXEL = -170000;
 
     private static final double RECTANGLE_WIDTH = 77.0;
     private static final double RECTANGLE_HEIGHT = 221.0;
@@ -74,24 +72,12 @@ public class PageScanner implements PlugInFilter
 
         alignPage(this.ip);
 
-        //try {
-        //    writeFile(ip);
-        //}
-        //catch (IOException e){
-        //    e.printStackTrace();
-        //}
-
         //ensures that we can revert back ti the original, non-scaled down version
         ip.snapshot();
         // find origin region
 
         origin = findOrigin();
-        try {
-            writeFile(this.ip, "outScaledDown");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
+
         if (origin == null) {
             System.out.println("No origin found");
             System.exit(0);
@@ -100,12 +86,6 @@ public class PageScanner implements PlugInFilter
         // now we need a non-scaled version.
         ip.reset();
 
-        try {
-            writeFile(ip, "outOG");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
         // We should now know the region in which the origin exists.
 
         int pixelPosition = establishOrigin(origin[0], origin[1]);
@@ -113,16 +93,10 @@ public class PageScanner implements PlugInFilter
         scaleCorrection(pixelPosition);
 
         // Ensure that the file has correct dimensions for file checks
-
         this.ip.snapshot();
 
         origin = findOrigin();
-        try {
-            writeFile(this.ip, "test20");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
+
         if (origin == null) {
             System.out.println("No origin found");
             System.exit(0);
@@ -132,38 +106,16 @@ public class PageScanner implements PlugInFilter
         this.ip.reset();
 
         pixelPosition = establishOrigin(origin[0], origin[1]);
-        try {
-            writeFile(this.ip, "Pre Process");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
+
         if (pixelPosition == -1){
             System.out.println("Could not find origin");
             System.exit(0);
         }
-        pixels[pixelPosition] = -18000;
-        // write file method?
-
-        try {
-            writeFile(this.ip, "FINAL ORIGIN FOUND");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-
 
         int[][] test = getStudentNumber(pixelPosition);
-        System.out.println("B-pixels" + test[0][1]);
-
-        if (isQuiz){
-            // mark the quiz
-        }
-        else{
-
-        }
-
+        int[][] quiz = getQuizAnswers(pixelPosition);
     }
+
     //------------------------------------------------------------------------------------------------------------------
 
     /**
@@ -174,7 +126,6 @@ public class PageScanner implements PlugInFilter
      *  This int[] array is the new array of pixels, which is used to rectify the image
      */
     private void alignPage(ImageProcessor ip) {
-        System.out.println("ALIGN PAGE");
         int distanceTop = -1;
         int distanceBot = -1;
         int distanceMid = -1;
@@ -191,12 +142,6 @@ public class PageScanner implements PlugInFilter
         // measures distance from edge to the border  at the topStart row.
         topRowCheck:{
             int pixelPosition = topStart * ip.getWidth();
-            /** TODO
-             * Remove this
-             */
-            for (int test = 0; test != 10; test++) {
-                pixels[pixelPosition + test] = -18560;
-            }
 
             for (int column = 0; column != BORDER_THRESHOLD; column++) {
                 if (pixels[pixelPosition + column] < BLACK_PIXEL) {
@@ -259,12 +204,6 @@ public class PageScanner implements PlugInFilter
         }
         midRowCheck:{
             int pixelPosition = midStart * ip.getWidth();
-            /** TODO
-             * Remove this
-             */
-            for (int test = 0; test != 10; test++) {
-                pixels[pixelPosition + test] = -18560;
-            }
 
             for (int column = 0; column != BORDER_THRESHOLD; column++) {
                 if (pixels[pixelPosition + column] < BLACK_PIXEL) {
@@ -297,13 +236,10 @@ public class PageScanner implements PlugInFilter
         }
         if(botBorder && midBorder){
             int rows = botStart - midStart;
-            System.out.println("top border too close to the edge");
-            System.out.println("so we take mid and bot");
 
             int diff = distanceMid - distanceBot;
             double radAngle = Math.atan(diff * 1.0/rows);
             double Angle =  Math.toDegrees(radAngle);
-            System.out.println("Rotate angle: " + Angle);
             ip.rotate(-Angle);
         }
         else if (botBorder && topBorder){
@@ -315,18 +251,15 @@ public class PageScanner implements PlugInFilter
             double radAngle = Math.atan(diff * 1.0/rows);
             double Angle =  Math.toDegrees(radAngle);
 
-            System.out.println("Rotate angle: " + Angle);
             ip.rotate(-Angle);
         }
         else if(topBorder && midBorder){
             int rows = midStart - topStart;
-            System.out.println("bot border too close to the edge");
-            System.out.println("so we take MID and TOP");
 
             int diff = distanceTop - distanceMid;
             double radAngle = Math.atan(diff * 1.0/rows);
             double Angle =  Math.toDegrees(radAngle);
-            System.out.println("Rotate angle: " + Angle);
+
             ip.rotate(-Angle);
         }
         else{
@@ -347,8 +280,6 @@ public class PageScanner implements PlugInFilter
      * Here x and y are the relative co-ordinates on the original ImageProcessor.
      */
     private int[] findOrigin(){
-        System.out.println("findOrigin");
-
         int[] Origin = new int[2];
         int[] pixels = (int[])this.ip.getPixels();
 
@@ -364,15 +295,11 @@ public class PageScanner implements PlugInFilter
         boolean rotated = false;
         this.ip.scale(0.2,0.2);
 
-        System.out.println(width + ", " + height);
-        System.out.println(newWidth + ", " + newHeight);
-
         for (row = 0; row < newHeight; row++) {
             //System.out.println(row + ", " + newHeight/2);
             if( row > newHeight/2){
 
                 if(rotated) {
-                    System.out.println("There is no black block on this page FLAG");
                     this.ip.setPixels(pixels);
 
                     return null;
@@ -430,23 +357,21 @@ public class PageScanner implements PlugInFilter
     }
     //------------------------------------------------------------------------------------------------------------------
 
-    // This method does not change, even if it is not a quiz
+    /**
+     *  Checks the presence of pixels in the allocated squares for the student number and returns the array of
+     *  number of pixels per block.
+     * @param originPixel
+     * @return int[][]
+     */
     public int[][] getStudentNumber(int originPixel){
         int[][] namePixels = new int[10][26];
-        System.out.println("------------Mark Student Numbers------------------");
-        System.out.println("XScale: " + ScaleFactor);
-        System.out.println("YScale: " + ScaleFactor);
+
         int[] pixels = (int[]) this.ip.getPixels();
-        System.out.println(this.ip.getWidth() + ", " + this.ip.getHeight());
+
         int currentPixelPoint = originPixel + (int)Math.round(771*ScaleFactor) +
-                (int)Math.round(264* ScaleFactor * this.ip.getWidth()) +//changed from 262
+                (int)Math.round(264* ScaleFactor * this.ip.getWidth()) +
                 (int)Math.round(BORDER_THICKNESS*ScaleFactor);
 
-        System.out.println("Jump down gap: " + (BORDER_THICKNESS * 3 + BOX_HEIGHT + VERTICAL_GAP));
-        System.out.println("Jump across gap: " + (BORDER_THICKNESS * 2 + BOX_WIDTH + HORIZONTAL_GAP));
-
-        System.out.println(originPixel/ip.getWidth()+", "+ originPixel%ip.getWidth());
-        System.out.println((int)Math.round(771*ScaleFactor));
         // outer loop goes through box columns
         int collCount = 0;
         for (int column = 0; column != 10; column ++){
@@ -467,21 +392,14 @@ public class PageScanner implements PlugInFilter
                 // shifts it down by a box and its space
                 if (row!=0) {
                     currentPixelPoint += this.ip.getWidth() *
-                            (BORDER_THICKNESS * 2 + BOX_HEIGHT + VERTICAL_GAP);
+                            (int)Math.round(ScaleFactor*(BORDER_THICKNESS * 2 + BOX_HEIGHT + VERTICAL_GAP));
 
                 }
 
                 // iterates through actual pixel block
-                //System.out.println(column + ", " + row);
-                //System.out.println(currentPixelPoint);
                 for(int pixelRow = 2; pixelRow != (int) Math.round(BOX_HEIGHT*ScaleFactor)-2; pixelRow ++){
                     for(int pixelColumn = 2; pixelColumn != (int) Math.round(BOX_WIDTH*ScaleFactor)-2; pixelColumn ++){
 
-
-
-                        if(row == 1 && column == 0) {
-                            System.out.println(pixels[currentPixelPoint]);
-                        }
                         if (pixels[currentPixelPoint + pixelColumn + pixelRow*this.ip.getWidth()] < BLACK_PIXEL) {
 
                             namePixels[column][row] += 1;
@@ -489,58 +407,58 @@ public class PageScanner implements PlugInFilter
                         }
                     }
                 }
-                System.out.println(namePixels[column][row]);
                 count ++;
             }
 
             currentPixelPoint = originPixel + (int)Math.round(771*ScaleFactor) +
                     (int)Math.round(264* ScaleFactor * this.ip.getWidth()) +
                     (int)Math.round(BORDER_THICKNESS * ScaleFactor) +
-                    column * (2 * BORDER_THICKNESS + BOX_WIDTH * 2);
+                    (int)Math.round(ScaleFactor*column * (2 * BORDER_THICKNESS + BOX_WIDTH * 2));
         }
         this.ip.setPixels(pixels);
-        try{
-            writeFile(this.ip, "PLZWORK");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
+
         return namePixels;
     }
     //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     *  Checks the presence of pixels in the allocated squares for the quiz or answers and returns the array of
+     *  number of pixels per block.
+     * @param originPixel
+     * @return int[][]
+     */
     public int[][] getQuizAnswers(int originPixel){
-        //start of A1 block is 581, 1770
-        int[][] namePixels = new int[16][10];
-        System.out.println("------------Mark Quiz Numbers------------------");
+        int[][] quizPixels = new int[17][10];
+
 
         int[] pixels = (int[]) this.ip.getPixels();
-        System.out.println(this.ip.getWidth() + ", " + this.ip.getHeight());
-        int currentPixelPoint = originPixel + (int)Math.round(771*ScaleFactor) +
-                (int)Math.round(264* ScaleFactor * this.ip.getWidth()) +//changed from 262
+
+        int currentPixelPoint = originPixel + (int)Math.round(465*ScaleFactor) +
+                (int)Math.round(1505* ScaleFactor * this.ip.getWidth()) +//changed from 262
                 (int)Math.round(BORDER_THICKNESS*ScaleFactor);
 
-        System.out.println("Jump down gap: " + (BORDER_THICKNESS * 3 + BOX_HEIGHT + VERTICAL_GAP));
-        System.out.println("Jump across gap: " + (BORDER_THICKNESS * 2 + BOX_WIDTH + HORIZONTAL_GAP));
 
-        System.out.println(originPixel/ip.getWidth()+", "+ originPixel%ip.getWidth());
-        System.out.println((int)Math.round(771*ScaleFactor));
         // outer loop goes through box columns
         int collCount = 0;
-        for (int column = 0; column != 10; column ++){
+        for (int column = 0; column != 17; column ++){
             collCount ++;
             if (collCount % 2 == 0){
-                currentPixelPoint += 3;
+                currentPixelPoint += 4;
+            }
+            if (column >= 10){
+                currentPixelPoint += 10;
             }
             // inner loop goes through box rows
             int count = 0;
-            for (int row = 0; row != 26; row ++){
-                namePixels[column][row] = 0;
+            for (int row = 0; row != 10; row ++){
+                quizPixels[column][row] = 0;
                 if (column > 6 && row >= 10){
                     continue;
                 }
                 if (count % 2 == 0){
                     currentPixelPoint += 2*this.ip.getWidth();
                 }
+
                 // shifts it down by a box and its space
                 if (row!=0) {
                     currentPixelPoint += this.ip.getWidth() *
@@ -549,40 +467,27 @@ public class PageScanner implements PlugInFilter
                 }
 
                 // iterates through actual pixel block
-                //System.out.println(column + ", " + row);
-                //System.out.println(currentPixelPoint);
                 for(int pixelRow = 2; pixelRow != (int) Math.round(BOX_HEIGHT*ScaleFactor)-2; pixelRow ++){
                     for(int pixelColumn = 2; pixelColumn != (int) Math.round(BOX_WIDTH*ScaleFactor)-2; pixelColumn ++){
 
-
-
-                        if(row == 1 && column == 0) {
-                            System.out.println(pixels[currentPixelPoint]);
-                        }
                         if (pixels[currentPixelPoint + pixelColumn + pixelRow*this.ip.getWidth()] < BLACK_PIXEL) {
 
-                            namePixels[column][row] += 1;
+                            quizPixels[column][row] += 1;
                             pixels[currentPixelPoint + pixelColumn + pixelRow*this.ip.getWidth()] = -180000;
                         }
                     }
                 }
-                System.out.println(namePixels[column][row]);
                 count ++;
             }
 
-            currentPixelPoint = originPixel + (int)Math.round(771*ScaleFactor) +
-                    (int)Math.round(264* ScaleFactor * this.ip.getWidth()) +
+            currentPixelPoint = originPixel + (int)Math.round(465*ScaleFactor) +
+                    (int)Math.round(1505* ScaleFactor * this.ip.getWidth()) +
                     (int)Math.round(BORDER_THICKNESS * ScaleFactor) +
                     column * (2 * BORDER_THICKNESS + BOX_WIDTH * 2);
         }
         this.ip.setPixels(pixels);
-        try{
-            writeFile(this.ip, "PLZWORK");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-        return namePixels;
+
+        return quizPixels;
     }
     //------------------------------------------------------------------------------------------------------------------
     /**
@@ -596,7 +501,6 @@ public class PageScanner implements PlugInFilter
      * @return int[x,y]
      */
     private int establishOrigin(int x, int y){
-        System.out.println("Establish Origin");
         int[] pixels = (int[])this.ip.getPixels();
 
         for (int row = y -10; row != y + 10; row ++) {
@@ -623,7 +527,6 @@ public class PageScanner implements PlugInFilter
                                 }
                             }
                         }
-                        System.out.println(pixelCount);
                         if (pixelCount >= REGION_THRESHOLD){
                             isBlock = true;
                         }
@@ -631,13 +534,12 @@ public class PageScanner implements PlugInFilter
 
                     if (isBlock) {
                         pixels[position] = -180000;
-                        System.out.println("Established origin: "+column+", "+row);
                         return  position;
                     }
                 }
             }
         }
-        System.out.println("Could not find the block on OG image");
+
         return -1;
     }
     //------------------------------------------------------------------------------------------------------------------
@@ -651,7 +553,6 @@ public class PageScanner implements PlugInFilter
      * correct axis.
      */
     private void scaleCorrection(int pixelPosition){
-        System.out.println("Scale Correction");
         int width = 0;
         int height = 0;
         int start = pixelPosition;
@@ -670,23 +571,11 @@ public class PageScanner implements PlugInFilter
             height ++;
             startHeight += ip.getWidth();
         }
-        System.out.println("WIDTH: "+ width);
-        System.out.println("HEIGHT: "+ height);
         ScaleFactor = (1 - (width*1.0/height*1.0) / RECTANGLE_WIDTH/RECTANGLE_HEIGHT) ;
-
-        System.out.println(ScaleFactor);
-        System.out.println((int)Math.round(ip.getWidth()*(ScaleFactor)));
-        System.out.println((int)Math.round(ip.getWidth()*(ScaleFactor)));
 
         this.ip =  this.ip.resize((int)Math.round(this.ip.getWidth()*(ScaleFactor)),
                 (int)Math.round(this.ip.getHeight()*(ScaleFactor)));
 
-        try{
-            writeFile(this.ip, "postScale");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -699,11 +588,17 @@ public class PageScanner implements PlugInFilter
      * as well as marking front pages.
      */
     public void writeFile(ImageProcessor ip, String name) throws IOException{
-        System.out.println("Wrote file " + name);
         BufferedImage image = ip.getBufferedImage();
         ImageIO.write(image, "png", new File(name +".png"));
 
     }
+    //------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Simple getter for ImageProcessor
+     *
+     * @return ImageProcessor
+     */
     public ImageProcessor getIp() {
         return ip;
     }

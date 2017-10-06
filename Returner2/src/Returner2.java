@@ -18,7 +18,7 @@ public class Returner2
         // /rotated15r.tiff
         // /upsidedown.tiff
         // /rectangleRotate.tiff
-        final String IMAGEPATH = "/test/rectangleTESTROTATE.png";
+        final String IMAGEPATH = "/test/rectangleTESTQUIZ.png";
 
         PageScanner ps = null;
         ImagePlus ip = null;

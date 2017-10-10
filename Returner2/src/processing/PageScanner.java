@@ -70,50 +70,6 @@ public class PageScanner implements PlugInFilter
         int[] pixels = (int[]) this.ip.getPixels();
         int[] origin;
 
-        alignPage(this.ip);
-
-        //ensures that we can revert back ti the original, non-scaled down version
-        ip.snapshot();
-        // find origin region
-
-        origin = findOrigin();
-
-        if (origin == null) {
-            System.out.println("No origin found");
-            System.exit(0);
-        }
-
-        // now we need a non-scaled version.
-        ip.reset();
-
-        // We should now know the region in which the origin exists.
-
-        int pixelPosition = establishOrigin(origin[0], origin[1]);
-
-        scaleCorrection(pixelPosition);
-
-        // Ensure that the file has correct dimensions for file checks
-        this.ip.snapshot();
-
-        origin = findOrigin();
-
-        if (origin == null) {
-            System.out.println("No origin found");
-            System.exit(0);
-        }
-
-        // now we need a non-scaled version.
-        this.ip.reset();
-
-        pixelPosition = establishOrigin(origin[0], origin[1]);
-
-        if (pixelPosition == -1){
-            System.out.println("Could not find origin");
-            System.exit(0);
-        }
-
-        int[][] test = getStudentNumber(pixelPosition);
-        int[][] quiz = getQuizAnswers(pixelPosition);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -279,7 +235,7 @@ public class PageScanner implements PlugInFilter
      * @return int[x,y]
      * Here x and y are the relative co-ordinates on the original ImageProcessor.
      */
-    private int[] findOrigin(){
+    public int[] findOrigin(){
         int[] Origin = new int[2];
         int[] pixels = (int[])this.ip.getPixels();
 
@@ -500,7 +456,7 @@ public class PageScanner implements PlugInFilter
      *
      * @return int[x,y]
      */
-    private int establishOrigin(int x, int y){
+    public int establishOrigin(int x, int y){
         int[] pixels = (int[])this.ip.getPixels();
 
         for (int row = y -10; row != y + 10; row ++) {
@@ -602,4 +558,102 @@ public class PageScanner implements PlugInFilter
     public ImageProcessor getIp() {
         return ip;
     }
+
+    public int[][] getStudent(){
+        int[] origin;
+
+        alignPage(this.ip);
+
+        //ensures that we can revert back ti the original, non-scaled down version
+        ip.snapshot();
+        // find origin region
+
+        origin = findOrigin();
+
+        if (origin == null) {
+            System.out.println("No origin found");
+            System.exit(0);
+        }
+
+        // now we need a non-scaled version.
+        ip.reset();
+
+        // We should now know the region in which the origin exists.
+
+        int pixelPosition = establishOrigin(origin[0], origin[1]);
+
+        scaleCorrection(pixelPosition);
+
+        // Ensure that the file has correct dimensions for file checks
+        this.ip.snapshot();
+
+        origin = findOrigin();
+
+        if (origin == null) {
+            System.out.println("No origin found");
+            System.exit(0);
+        }
+
+        // now we need a non-scaled version.
+        this.ip.reset();
+
+        pixelPosition = establishOrigin(origin[0], origin[1]);
+
+        if (pixelPosition == -1){
+            System.out.println("Could not find origin");
+            System.exit(0);
+        }
+
+        int[][] test = getStudentNumber(pixelPosition);
+        return test;
+    }
+    public int[][] getPaper(){
+        int[] origin;
+
+        alignPage(this.ip);
+
+        //ensures that we can revert back ti the original, non-scaled down version
+        ip.snapshot();
+        // find origin region
+
+        origin = findOrigin();
+
+        if (origin == null) {
+            System.out.println("No origin found");
+            System.exit(0);
+        }
+
+        // now we need a non-scaled version.
+        ip.reset();
+
+        // We should now know the region in which the origin exists.
+
+        int pixelPosition = establishOrigin(origin[0], origin[1]);
+
+        scaleCorrection(pixelPosition);
+
+        // Ensure that the file has correct dimensions for file checks
+        this.ip.snapshot();
+
+        origin = findOrigin();
+
+        if (origin == null) {
+            System.out.println("No origin found");
+            System.exit(0);
+        }
+
+        // now we need a non-scaled version.
+        this.ip.reset();
+
+        pixelPosition = establishOrigin(origin[0], origin[1]);
+
+        if (pixelPosition == -1){
+            System.out.println("Could not find origin");
+            System.exit(0);
+        }
+
+        int[][] quiz = getQuizAnswers(pixelPosition);
+        return quiz;
+    }
+
 }
